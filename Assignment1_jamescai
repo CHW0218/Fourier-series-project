@@ -1,0 +1,256 @@
+//Name: James Cai
+//Class: ICS4U
+//Date:2019/09/30
+//Instructor: Mr.Raduovic
+//Assignment name: Drawing Functions Using Spinning Lines
+//brief description of program: This program is used to using spinning lines to draw the approximation function of the given function.
+
+//import all the needed class to run our program.
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
+
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
+
+import javafx.animation.AnimationTimer;
+import javafx.application.Application; 
+import javafx.scene.Group; 
+import javafx.scene.Scene; 
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
+import javafx.scene.shape.Line;
+import javafx.stage.Stage;  
+
+//the main class of the program
+public class Assignment1_jamescai extends Application { 
+
+//Create the needed Objects and variables that needed to run the program.
+	Group group;
+	Scene scene;
+	String file_name = "function.txt";//The path of the file 
+	
+	List<Double> Cfy_list = new ArrayList<>();
+	List<Double> Cfx_list = new ArrayList<>();
+	
+	//the two ways of loading data, user can choose one of them by comment out another.
+	List<Double[]> point_xy = load_function(file_name);
+	//loading sample of function from file.
+	
+//	List<Double[]> point_xy = load_function();
+	//loading sample of function by enter the equation.
+	
+	List<Line> lines = new ArrayList<>();
+	
+	double  width = 600, length = 600, pastX,pastY,delta_t = 1.0/(point_xy.size()-1),t =0,current_x,current_y;
+	int f_start = -30,f_end = 30,i=0;
+
+public ArrayList<Double[]> load_function(String file){//The method of loading data that loaded data from the file
+	
+		//use BufferReader to read the file
+		BufferedReader reader;
+		try {
+			//create a arraylist that holds the data
+			List<Double[]> points = new ArrayList<>();
+			reader = new BufferedReader(new FileReader(
+					file_name));
+			String line = reader.readLine();
+			String[] arrOfLine; 
+			while (line != null) {//check if file have next line
+				//create a array that contain x and y
+				arrOfLine = line.split(",", 2); 
+				Double[] arrDouble = {Double.valueOf(arrOfLine[0]),Double.valueOf(arrOfLine[1])};
+				//added array to the array list
+				points.add(arrDouble);
+				line = reader.readLine();
+			}
+			//close the file after finish
+			reader.close();
+			//return the array list
+			return (ArrayList<Double[]>) points;
+		} catch (IOException e) {
+			//return null if the file cannot be read successfully.
+			e.printStackTrace();
+			return null;
+		}
+	}
+
+public ArrayList<Double[]> load_function(){//The method of create data from the equation.
+	List<Double[]> points = new ArrayList<>();
+	//ask user to input the equation.
+	Scanner input = new Scanner(System. in);
+	System.out.println("Please enter the function you want to draw.");
+	//split the part of function/equation that contain f(x)=/y= out of the function/equation.
+	String[] equation = input.nextLine().split("=", 2);
+	//use java scriptEngine to convert string to equation.
+	ScriptEngineManager mgr = new ScriptEngineManager();
+	ScriptEngine engine = mgr.getEngineByName("JavaScript");
+	try {
+	for(double x=-300;x<=300;x++) {//try the value of x from -300 to 300,
+		//replace string x to the value of x in the equation
+		String equation_final = equation[equation.length-1].replaceAll("x",Double.toString(x));
+		//get the value of x and y
+		Double[] arrDouble={x, (double) engine.eval(equation_final)};
+		//added to the array list
+		points.add(arrDouble);
+	} return (ArrayList<Double[]>) points;
+	}
+	//return null if the process failed.
+	catch (ScriptException e){
+	e.printStackTrace();
+	return null;
+	}
+	}
+
+//calculate the sin function by input frequency and angle
+public double sin(double f, double t) {
+	double sin_function = Math.sin(Math.PI*2*f*t);
+	return sin_function;	
+}
+
+//calculate the cos function by input frequency and angle
+public double cos(double f, double t) {
+	double cos_function = Math.cos(Math.PI*2*f*t); 
+	return cos_function;
+}
+
+//calculate the value of Cfx by input frequency and return the result.
+public double Cfx(int f) {
+	double Cfx=0;
+	int count = 0;
+	for(double i = 0; i<=1;i +=delta_t) {
+		Cfx += (point_xy.get(count)[0]*cos(f,i) + point_xy.get(count)[1]*sin(f,i)) * delta_t;
+		count++;
+	}
+	return Cfx;
+}
+
+//calculate the value of Cfy by input frequency and return the result.
+public double Cfy(int f) {
+	double Cfy =0;
+	int count = 0;
+	for(double i = 0; i<=1;i+=delta_t) {
+		Cfy += (point_xy.get(count)[0]*sin(f,i) - point_xy.get(count)[1]*cos(f,i)) * delta_t;
+		count++;
+	}
+	Cfy = Cfy*-1;
+	return Cfy;	
+}
+
+//calculate the value of approximated x by input how many frequency we want to approximate and return the result.
+private double approximated_x(int f_start,int f_end,double t) {
+	double approximated_x = 0;
+	int i = 0;
+	for(int f =f_start; f<=f_end;f++ ){
+	//plus half of the width to make the start point was on original point.
+	//set the start x position of spinning line
+	(lines.get(i)).setStartX(width/2.0 + approximated_x);
+	approximated_x += Cfx_list.get(i)*cos(f,t)-Cfy_list.get(i)*sin(f,t);
+	//set the end x position of spinning line
+	(lines.get(i)).setEndX(width/2.0 + approximated_x);
+	i++;
+	}
+	return approximated_x;
+}
+
+//calculate the value of approximated y by input how many frequency we want to approximate and return the result.
+private double approximated_y(int f_start,int f_end,double t) {
+	double approximated_y = 0;
+	int i = 0;
+	for(int f =f_start; f<=f_end;f++ ) {
+	//use half of the length minus the value because the increase of y value on javafx was inverse compare to increase of y value on function.
+	//set the start y position of spinning line
+	(lines.get(i)).setStartY(length/2.0 - approximated_y);
+	approximated_y += Cfx_list.get(i)*sin(f,t)+Cfy_list.get(i)*cos(f,t);
+	//set the end y position of spinning line
+	(lines.get(i)).setEndY(length/2.0 - approximated_y);
+	i++;
+	}
+	return approximated_y;	
+}
+
+//initialize all the spinning line
+public void spinning_line () {
+	for(int i = 0; i <= (f_end - f_start);i++) {
+		 Line line = new Line();
+		  lines.add(line);
+		  group.getChildren().add(line);
+	}
+}
+
+//generate all the value of cfx and cfy, save them in array list for later use.
+public void Cfxy () {
+	  for(int f =f_start; f<=f_end;f++ ) {
+		  Cfx_list.add(Cfx(f));
+		  Cfy_list.add(Cfy(f));
+	  }
+}
+
+//the function that draw all the approximate line and the spinning line.
+public void drawFunction() {
+	if(t <= 1) {// stop drawing when the approximation finish.
+	// save the value of approximation in variable that don't need to calculate them twice.
+	current_x = approximated_x(f_start,f_end,t)+width/2.0;
+	current_y = length/2.0 - approximated_y(f_start,f_end,t);
+	//draw the approximation line.
+	Line line = new Line(pastX,pastY,current_x,current_y);
+	 group.getChildren().add(line);
+	// record the last approximation point to connect them with the new point.
+	 pastX = current_x;
+	 pastY = current_y;
+	 t += delta_t;
+	}else {//remove all the spinning line when finish drawing
+		for(int i = 0; i <= (f_end - f_start);i++) {
+			  group.getChildren().removeAll(lines.get(i));
+		}
+	}
+	}
+
+//draw the original function on screen that can compare them with approximation function easily
+public void original_function() {
+	for(int i = 0; i<= point_xy.size()-1 ; i++) {
+		  Circle dot = new Circle(point_xy.get(i)[0]+width/2.0,length/2.0 - point_xy.get(i)[1],0.1);
+		  dot.setStroke(Color.RED);
+		  group.getChildren().add(dot);
+	  }
+}
+
+   @Override     
+   public void start(Stage primaryStage) throws Exception { // class that start the program
+	  //initialize all the variable that needed.
+	  group = new Group();
+      scene = new Scene(group, length, width);
+	  scene.setFill(Color.WHITE); 
+	  spinning_line ();
+	  Cfxy ();
+	  original_function();
+	  //initialize the past x and y to avoid draw a irrelevant line at the first time.
+	  pastX = approximated_x(f_start,f_end,t)+width/2.0;
+	  pastY = length/2.0 - approximated_y(f_start,f_end,t);
+	  
+	  //doing the animation part of the program.
+	  AnimationTimer timer = new AnimationTimer() {
+		   long oldTime = 0;
+		   @Override
+		   public void handle(long time) {
+			   oldTime += 1;
+			   if (time - oldTime > 1) {
+				drawFunction();
+			   oldTime = time;
+			   }
+			   }
+			   };
+	  timer.start();
+      primaryStage.setTitle("Assignment1"); 
+      primaryStage.setScene(scene); 
+      primaryStage.show(); 
+   }    
+   // the class that launch the start class
+   public static void main(String args[]){          
+      launch(args);     
+   }         
+} 
